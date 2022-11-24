@@ -13,45 +13,48 @@
   import { OLMap } from "https://eiichimiyagawa.github.io/OLMap/v1/OLMap.js";
   import { CSV } from "https://js.sabae.cc/CSV.js";
 
-  const addMarker = (layer, params = {}) => {
-    const feature = new ol.Feature({
-      geometry: new ol.geom.Point(ol.proj.transform([params["longitude"], params["latitude"]], "EPSG:4326","EPSG:3857")),
-      content: params["content"] || ""
+  // iOS14以前に関する対応（top-level await未対応のため）
+  onload = async() => {
+    const addMarker = (layer, params = {}) => {
+      const feature = new ol.Feature({
+        geometry: new ol.geom.Point(ol.proj.transform([params["longitude"], params["latitude"]], "EPSG:4326","EPSG:3857")),
+        content: params["content"] || ""
+      });
+      feature.setStyle(new ol.style.Style({
+        image: new ol.style.Icon({
+          anchor: [0.5, 0.5],
+          anchorXUnits: "fraction",
+          anchorYUnits: "fraction",
+          src: params["icon"] || "./v1/icon.png"
+        })
+      }));
+      layer.getSource().addFeature(feature);
+    };
+
+    title.textContent = document.title;
+
+    const data = await CSV.fetch("./data.csv");
+    const manholes = await CSV.toJSON(data);
+
+    const map = new OLMap({
+      zoom: 9
     });
-    feature.setStyle(new ol.style.Style({
-      image: new ol.style.Icon({
-        anchor: [0.5, 0.5],
-        anchorXUnits: "fraction",
-        anchorYUnits: "fraction",
-        src: params["icon"] || "./v1/icon.png"
-      })
-    }));
-    layer.getSource().addFeature(feature);
-  };
+    map.addVectorLayer("marker");
+    const layer = map.getLayer("marker");
 
-  title.textContent = document.title;
-
-  const data = await CSV.fetch("./data.csv");
-  const manholes = CSV.toJSON(data);
-
-  const map = new OLMap({
-    zoom: 9
-  });
-  map.addVectorLayer("marker");
-  const layer = map.getLayer("marker");
-
-  manholes.forEach((manhole) => {
-    let content = `${manhole["名前"]}<br />${manhole["都道府県"]}${manhole["市区町村"]}${manhole["住所"]}<br />${manhole["緯度"]}, ${manhole["経度"]}<br />`
-    if (manhole["画像URL"]) {
-      content += `<img src="${manhole["画像URL"]}" style="width: 100%;"/><br />`;
-    }
-    addMarker(layer, {
-      longitude: Number(manhole["経度"]),
-      latitude: Number(manhole["緯度"]),
-      content: content + `<p style="text-align: left;">${manhole["詳細"]}</p>`,
-      icon: "./image/icon.png"
+    manholes.forEach((manhole) => {
+      let content = `${manhole["名前"]}<br />${manhole["都道府県"]}${manhole["市区町村"]}${manhole["住所"]}<br />${manhole["緯度"]}, ${manhole["経度"]}<br />`
+      if (manhole["画像URL"]) {
+        content += `<img src="${manhole["画像URL"]}" style="width: 100%;"/><br />`;
+      }
+      addMarker(layer, {
+        longitude: Number(manhole["経度"]),
+        latitude: Number(manhole["緯度"]),
+        content: content + `<p style="text-align: left;">${manhole["詳細"]}</p>`,
+        icon: "./image/icon.png"
+      });
     });
-  });
+  }
 </script>
 
 <style>
